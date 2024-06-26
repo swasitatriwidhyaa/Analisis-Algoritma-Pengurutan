@@ -1,0 +1,166 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <chrono>
+#include <random>
+#include <iomanip>
+
+using namespace std;
+using namespace chrono;
+
+void bubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; ++i) {
+        for (int j = 0; j < n - i - 1; ++j) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}
+
+void insertionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 1; i < n; ++i) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            --j;
+        }
+        arr[j + 1] = key;
+    }
+}
+
+void selectionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; ++i) {
+        int minIdx = i;
+        for (int j = i + 1; j < n; ++j) {
+            if (arr[j] < arr[minIdx]) {
+                minIdx = j;
+            }
+        }
+        swap(arr[minIdx], arr[i]);
+    }
+}
+
+void merge(vector<int>& arr, int left, int mid, int right) {
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
+
+    vector<int> L(n1), R(n2);
+
+    for (int i = 0; i < n1; ++i) L[i] = arr[left + i];
+    for (int i = 0; i < n2; ++i) R[i] = arr[mid + 1 + i];
+
+    int i = 0, j = 0, k = left;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            ++i;
+        } else {
+            arr[k] = R[j];
+            ++j;
+        }
+        ++k;
+    }
+
+    while (i < n1) {
+        arr[k] = L[i];
+        ++i;
+        ++k;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        ++j;
+        ++k;
+    }
+}
+
+void mergeSort(vector<int>& arr, int left, int right) {
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+
+        mergeSort(arr, left, mid);
+        mergeSort(arr, mid + 1, right);
+
+        merge(arr, left, mid, right);
+    }
+}
+
+int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[high];
+    int i = (low - 1);
+
+    for (int j = low; j < high; ++j) {
+        if (arr[j] < pivot) {
+            ++i;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);
+    return (i + 1);
+}
+
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+double measureExecutionTime(void(*sortFunc)(vector<int>&), vector<int>& arr) {
+    auto start = high_resolution_clock::now();
+    sortFunc(arr);
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    return duration.count();
+}
+
+void testSort(void(*sortFunc)(vector<int>&), const string& algoName, const vector<int>& sizes, const vector<string>& conditions) {
+    cout << "Algoritma: " << algoName << endl;
+    for (const string& condition : conditions) {
+        cout << "Kondisi Data: " << condition << endl;
+        for (int n : sizes) {
+            vector<int> arr(n);
+            mt19937 mt(time(0));
+            uniform_int_distribution<int> dist(1, 100);
+            generate(arr.begin(), arr.end(), [&dist, &mt]() { return dist(mt); });
+            if (condition == "Terurut Terbalik") {
+                sort(arr.begin(), arr.end(), greater<int>());
+            } else if (condition == "Sudah Terurut") {
+                sort(arr.begin(), arr.end());
+            }
+
+            double time = measureExecutionTime(sortFunc, arr);
+
+            cout << "N=" << setw(5) << n << ": " << setw(7) << time << " mikrodetik" << endl;
+        }
+        cout << endl;
+    }
+}
+
+int main() {
+    vector<int> sizes = {10, 100, 500, 1000, 10000};
+    vector<string> conditions = {"Acak", "Terurut Terbalik", "Sudah Terurut"};
+
+    testSort(bubbleSort, "Bubble Sort", sizes, conditions);
+    testSort(insertionSort, "Insertion Sort", sizes, conditions);
+    testSort(selectionSort, "Selection Sort", sizes, conditions);
+
+    auto mergeSortWrapper = [](vector<int>& arr) {
+        mergeSort(arr, 0, arr.size() - 1);
+    };
+    testSort(mergeSortWrapper, "Merge Sort", sizes, conditions);
+
+    auto quickSortWrapper = [](vector<int>& arr) {
+        quickSort(arr, 0, arr.size() - 1);
+    };
+    testSort(quickSortWrapper, "Quick Sort", sizes, conditions);
+
+    return 0;
+}
